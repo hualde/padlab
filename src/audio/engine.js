@@ -266,6 +266,20 @@ export class AudioEngine {
     return this.ctx ? this.ctx.currentTime : 0;
   }
 
+  /**
+   * Instante que el oyente está escuchando ahora mismo. currentTime es lo que
+   * se está programando; el sonido sale outputLatency más tarde. Los visuales
+   * deben seguir este reloj para coincidir con lo que se oye.
+   */
+  visualNow() {
+    if (!this.ctx) return 0;
+    const ctx = this.ctx;
+    const latency = Number.isFinite(ctx.outputLatency) && ctx.outputLatency > 0
+      ? ctx.outputLatency
+      : Number.isFinite(ctx.baseLatency) ? ctx.baseLatency : 0;
+    return ctx.currentTime - Math.min(latency, 0.5);
+  }
+
   playClick(time, level = 1) {
     if (!this.ctx) return null;
     const start = Math.max(time, this.ctx.currentTime + 0.003);

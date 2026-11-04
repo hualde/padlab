@@ -1392,7 +1392,7 @@ function updateMetronomeVisuals() {
   const meta = state.metronome;
   if (!meta?.running) return;
 
-  const now = engine.now();
+  const now = engine.visualNow();
   if (now < meta.startTime) return;
   const beat = Math.floor((now - meta.startTime) / meta.beatDur) % 4;
   if (beat === meta.lastBeat) return;
@@ -2301,7 +2301,7 @@ function frame() {
   }
 
   if (state.view === 'train') {
-    strokeLane.draw(engine.now());
+    strokeLane.draw(engine.visualNow());
     updateTakeVisuals();
     updateMetronomeVisuals();
   }
@@ -2332,7 +2332,7 @@ function updateTakeVisuals() {
   const take = state.take;
   if (!take) return;
 
-  const now = engine.now();
+  const now = engine.visualNow();
 
   while (take.countIndex < take.countInTicks.length && now + 0.004 >= take.countInTicks[take.countIndex].time) {
     showCountIn(take.countInTicks[take.countIndex].number);
@@ -2411,7 +2411,7 @@ function updateCalibrationPulse() {
   const cal = state.calibration;
   if (!cal?.running) return;
 
-  const now = engine.now();
+  const now = engine.visualNow();
   const index = Math.floor((now - cal.clickTimes[0]) / cal.beatDur);
   if (index < 0 || index >= cal.total || index === cal.pulseIndex) return;
 
