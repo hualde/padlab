@@ -3061,3 +3061,38 @@ body:has(#view-train:not([hidden])) .train-layout {
 .exercise-group {
   flex: none;
 }
+
+/* ---------- Pestañas rudimentos / canciones ---------- */
+
+.list-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  margin-bottom: 8px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.list-tab {
+  padding: 7px 8px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--muted, var(--faint));
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.list-tab.is-active {
+  background: var(--accent);
+  color: #1a1206;
+}
+
+.list-tab:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

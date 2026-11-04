@@ -367,6 +367,14 @@ function bindEvents() {
     renderBpm();
   });
 
+  document.querySelectorAll('[data-list-tab]').forEach((tab) => {
+    tab.addEventListener('click', () => {
+      if (state.take) return;
+      listTab = tab.dataset.listTab;
+      buildExerciseList();
+    });
+  });
+
   els.exerciseList.addEventListener('click', (event) => {
     const button = event.target.closest('.exercise');
     if (!button || state.take) return;
@@ -633,42 +641,32 @@ function renderAll() {
   updateCalibrationBadge();
 }
 
-function buildExerciseList() {
-  els.exerciseList.innerHTML = '';
+let listTab = null;
 
-  for (const exercise of EXERCISES) {
-    const best = records[recordKey(exercise.id)]?.bestBpm;
+function buildExerciseList() {
+  if (!listTab) listTab = isSong(getExercise(settings.exerciseId)) ? 'songs' : 'rudiments';
+  els.exerciseList.innerHTML = '';
+  document.querySelectorAll('[data-list-tab]').forEach((tab) => {
+    const active = tab.dataset.listTab === listTab;
+    tab.classList.toggle('is-active', active);
+    tab.setAttribute('aria-selected', String(active));
+    tab.disabled = Boolean(state.take);
+  });
+
+  const songsTab = listTab === 'songs';
+  for (const exercise of songsTab ? SONGS : EXERCISES) {
+    const best = songsTab
+      ? records[recordKey(exercise.id, exercise.density, exercise.bars)]?.bestBpm
+      : records[recordKey(exercise.id)]?.bestBpm;
     const button = document.createElement('button');
     button.type = 'button';
-    button.className = `exercise${exercise.id === settings.exerciseId ? ' is-active' : ''}`;
+    button.className = `exercise${songsTab ? ' exercise-song' : ''}${exercise.id === settings.exerciseId ? ' is-active' : ''}`;
     button.dataset.exercise = exercise.id;
     button.setAttribute('role', 'listitem');
     button.disabled = Boolean(state.take);
     button.innerHTML = `
       <span class="exercise-name">${escapeHtml(exerciseName(exercise))}</span>
       <span class="exercise-short">${escapeHtml(exercise.short)}</span>
-      <span class="exercise-meta">${best ? `${best} BPM` : '—'}</span>
-    `;
-    els.exerciseList.append(button);
-  }
-
-  const heading = document.createElement('div');
-  heading.className = 'exercise-group';
-  heading.setAttribute('role', 'presentation');
-  heading.textContent = t('train.songs');
-  els.exerciseList.append(heading);
-
-  for (const song of SONGS) {
-    const best = records[recordKey(song.id, song.density, song.bars)]?.bestBpm;
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = `exercise exercise-song${song.id === settings.exerciseId ? ' is-active' : ''}`;
-    button.dataset.exercise = song.id;
-    button.setAttribute('role', 'listitem');
-    button.disabled = Boolean(state.take);
-    button.innerHTML = `
-      <span class="exercise-name">${escapeHtml(exerciseName(song))}</span>
-      <span class="exercise-short">${escapeHtml(song.short)}</span>
       <span class="exercise-meta">${best ? `${best} BPM` : '—'}</span>
     `;
     els.exerciseList.append(button);
