@@ -124,8 +124,11 @@ for (const song of SONGS) {
   }
   song.bars = steps / slotsPerBar;
 
-  const played = song.events.filter((event) => event.midi != null);
-  song.short = `${played.slice(0, 7).map((event) => event.name.replace(/\d/, '')).join(' ')}…`;
+}
+
+// Vista previa de la digitación, como en los rudimentos: R L R L…
+for (const song of SONGS) {
+  song.short = `${songPattern(song).replace(/-/g, '').slice(0, 8).split('').join(' ')}…`;
 }
 
 export function isSong(piece) {
