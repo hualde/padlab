@@ -9,6 +9,8 @@
  *   4 → semicorcheas (16 golpes por compás)
  */
 
+import { SONGS } from './songs.js';
+
 export const BEATS_PER_BAR = 4;
 
 export const TAKE_BARS = [2, 4, 8, 16, 32];
@@ -124,7 +126,9 @@ export const EXERCISES = [
 ];
 
 export function getExercise(id) {
-  return EXERCISES.find((exercise) => exercise.id === id) || EXERCISES[0];
+  return EXERCISES.find((exercise) => exercise.id === id)
+    || SONGS.find((song) => song.id === id)
+    || EXERCISES[0];
 }
 
 for (const exercise of EXERCISES) {

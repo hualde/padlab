@@ -36,6 +36,18 @@ La frase puede ser de **1 compás** o de **2 compases alternando la mano inicial
 
 La antigua gráfica de dispersión respecto al pulso se ha quitado: el resumen de la toma y la guía de golpes dan la información sin ocupar media pantalla.
 
+## Canciones con melodía
+
+Debajo de los rudimentos hay 7 canciones tradicionales o de dominio público: *Mary Had a Little Lamb*, *Twinkle, Twinkle, Little Star*, *Frère Jacques*, *Ode to Joy*, *Jingle Bells*, *Au clair de la lune* y *Hot Cross Buns*.
+
+- Tocas **un golpe por nota**, alternando manos, y la melodía suena como guía (se puede quitar con el interruptor **Melodía**).
+- Los silencios y las notas largas no cuentan como golpes esperados; el click marca solo el pulso.
+- La guía de golpes muestra el nombre de cada nota sobre la mano que toca.
+- La toma dura lo que la canción (4 a 12 compases). Puntuación, récords e historial funcionan igual que con los rudimentos.
+- Con el micrófono activo, usa **auriculares** para que la melodía no entre en el micro.
+
+Añadir una canción es escribir una línea en `src/core/songs.js` (`Nota:duración`, donde 2 = negra) y sus textos en `i18n.js`.
+
 ## Solo metrónomo
 
 El selector **Ejercicio / Solo metrónomo** está en el panel de la toma. En modo metrónomo:
@@ -148,6 +160,7 @@ padlab/
 │  │  └─ onset-worklet.js  # procesador de audio
 │  ├─ core/
 │  │  ├─ exercises.js      # rudimentos, densidades y frases
+│  │  ├─ songs.js          # canciones de dominio público (melodía y ritmo)
 │  │  ├─ timing.js         # tomas, emparejamiento y métricas
 │  │  ├─ calibration.js    # estimación del retardo
 │  │  ├─ stats.js          # progreso, rachas y agregados
@@ -164,7 +177,7 @@ padlab/
 npm test
 ```
 
-26 pruebas unitarias: detector con señales sintéticas (golpes separados, dobles, ruido, refractario), rudimentos y densidades, lógica temporal y de puntuación, calibración y estadísticas de progreso.
+35 pruebas unitarias: detector con señales sintéticas (golpes separados, dobles, ruido, refractario), rudimentos y densidades, lógica temporal y de puntuación, calibración y estadísticas de progreso.
 
 Durante el desarrollo también se probó de punta a punta con Chrome headless, micrófono falso, una toma simulada y el modo metrónomo: 64/64 golpes, 98 puntos, 0 extras, sin errores de consola.
 

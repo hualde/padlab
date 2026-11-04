@@ -9,6 +9,7 @@ import {
   translationKeys,
 } from '../src/core/i18n.js';
 import { EXERCISES } from '../src/core/exercises.js';
+import { SONGS } from '../src/core/songs.js';
 
 test('español e inglés tienen el mismo conjunto de claves', () => {
   const es = new Set(translationKeys('es'));
@@ -39,7 +40,7 @@ test('traduce, interpola y pluraliza', () => {
 test('los rudimentos tienen nombre y descripción en ambos idiomas', () => {
   for (const locale of ['es', 'en', 'fr']) {
     setLocale(locale);
-    for (const exercise of EXERCISES) {
+    for (const exercise of [...EXERCISES, ...SONGS]) {
       assert.ok(t(exercise.nameKey) !== exercise.nameKey, `${locale} ${exercise.nameKey}`);
       assert.ok(t(exercise.descriptionKey) !== exercise.descriptionKey, `${locale} ${exercise.descriptionKey}`);
       assert.ok(t(exercise.tipKey) !== exercise.tipKey, `${locale} ${exercise.tipKey}`);

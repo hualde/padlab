@@ -3029,3 +3029,35 @@ body:has(#view-train:not([hidden])) .train-layout {
 .dock-icon:disabled {
   opacity: 0.4;
 }
+
+/* ---------- Canciones ---------- */
+
+.exercise-group {
+  margin: 10px 4px 2px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+  color: var(--faint);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+#melody-toggle {
+  display: none;
+}
+
+#view-train.is-song #melody-toggle {
+  display: flex;
+}
+
+#view-train.is-song #density-control,
+#view-train.is-song .transport-panel .select-row,
+#view-train.is-song #alternate-lead {
+  display: none;
+}
+
+.exercise,
+.exercise-group {
+  flex: none;
+}

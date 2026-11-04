@@ -46,7 +46,7 @@ export class StrokeLane {
     this.draw(this.lastNow);
   }
 
-  setPreview(pattern, density, slotsPerBar = density * 4) {
+  setPreview(pattern, density, slotsPerBar = density * 4, labels = null) {
     this.mode = 'preview';
     this.take = null;
     this.pattern = pattern;
@@ -56,6 +56,8 @@ export class StrokeLane {
       index,
       inBar: index,
       sticking,
+      rest: sticking === '-',
+      label: labels?.[index] || '',
       bar: 0,
       hit: null,
     }));
@@ -102,13 +104,15 @@ export class StrokeLane {
     const y = height * 0.52;
 
     this.drawGrid(ctx, width, height, (index) => startX + index * step, notes, this.density, true);
-    this.drawPlayhead(ctx, playheadX, height, HANDS[notes[0].sticking]?.hex || HANDS.R.hex, 0.45);
+    const firstIndex = Math.max(0, notes.findIndex((note) => !note.rest));
+    this.drawPlayhead(ctx, playheadX, height, HANDS[notes[firstIndex].sticking]?.hex || HANDS.R.hex, 0.45);
 
     notes.forEach((note, index) => {
       const x = startX + index * step;
+      if (note.rest) return;
       this.drawNote(ctx, x, y, note, {
         step,
-        next: index === 0,
+        next: index === firstIndex,
         past: false,
         alpha: index === 0 ? 1 : 0.82,
       });
@@ -125,7 +129,8 @@ export class StrokeLane {
 
     const minIndex = Math.max(0, Math.floor(f - playheadX / step) - 1);
     const maxIndex = Math.min(notes.length - 1, Math.ceil(f + (width - playheadX) / step) + 1);
-    const nextIndex = clamp(Math.ceil(f - 0.5), 0, notes.length - 1);
+    let nextIndex = clamp(Math.ceil(f - 0.5), 0, notes.length - 1);
+    while (nextIndex < notes.length - 1 && notes[nextIndex].rest) nextIndex += 1;
     const nextHand = notes[nextIndex]?.sticking || 'R';
 
     const xAt = (index) => playheadX + (index - f) * step;
@@ -136,6 +141,7 @@ export class StrokeLane {
 
     for (let index = minIndex; index <= maxIndex; index += 1) {
       const note = notes[index];
+      if (note.rest) continue;
       const x = xAt(index);
       if (x < -step || x > width + step) continue;
       this.drawNote(ctx, x, y, note, {
@@ -243,6 +249,12 @@ export class StrokeLane {
     ctx.fillStyle = `rgba(${hand.rgb}, ${alpha})`;
     ctx.font = `700 ${fontSize}px ${MONO}`;
     ctx.fillText(note.sticking, x, y + 0.5);
+
+    if (note.label) {
+      ctx.fillStyle = `rgba(232, 238, 247, ${Math.min(0.8, alpha * 0.8)})`;
+      ctx.font = `600 ${Math.max(8, Math.min(10, step * 0.26))}px ${MONO}`;
+      ctx.fillText(note.label, x, y - radius - 7);
+    }
 
     if (note.hit) {
       const color = note.hit.quality === 'perfect'

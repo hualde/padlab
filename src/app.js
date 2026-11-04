@@ -19,6 +19,7 @@ import {
 import { estimateLatency } from './core/calibration.js';
 import { buildProgress } from './core/stats.js';
 import { createStorage } from './core/storage.js';
+import { SONGS, isSong, songLabels, songPattern } from './core/songs.js';
 
 const DEFAULT_SETTINGS = {
   exerciseId: 'single',
@@ -26,6 +27,7 @@ const DEFAULT_SETTINGS = {
   bpm: 100,
   bars: 8,
   alternateLead: true,
+  melody: true,
   mode: 'exercise',
   locale: 'es',
   volume: 0.7,
@@ -152,12 +154,13 @@ function loadSettings() {
   const raw = store.read('settings', {});
   const merged = { ...DEFAULT_SETTINGS, ...(raw && typeof raw === 'object' ? raw : {}) };
 
-  if (!EXERCISES.some((exercise) => exercise.id === merged.exerciseId)) {
+  if (![...EXERCISES, ...SONGS].some((exercise) => exercise.id === merged.exerciseId)) {
     merged.exerciseId = DEFAULT_SETTINGS.exerciseId;
   }
   merged.density = [2, 3, 4].includes(Number(merged.density)) ? Number(merged.density) : 2;
   merged.bars = TAKE_BARS.includes(Number(merged.bars)) ? Number(merged.bars) : 8;
   merged.alternateLead = typeof merged.alternateLead === 'boolean' ? merged.alternateLead : true;
+  merged.melody = typeof merged.melody === 'boolean' ? merged.melody : true;
   merged.mode = merged.mode === 'metronome' ? 'metronome' : 'exercise';
   merged.locale = LOCALES.some((l) => l.id === merged.locale) ? merged.locale : 'es';
   merged.bpm = clamp(Math.round(Number(merged.bpm) || DEFAULT_SETTINGS.bpm), 40, 240);
@@ -203,6 +206,19 @@ function loadRecords() {
   return migrated;
 }
 
+function takeBarsFor(exercise = getExercise(settings.exerciseId)) {
+  return isSong(exercise) ? exercise.bars : settings.bars;
+}
+
+function restCount(slots) {
+  return slots.filter((slot) => slot.rest).length;
+}
+
+function minExpectedFor(take) {
+  const playable = take.slots.length - restCount(take.slots);
+  return Math.min(playable, 4 * take.density * 2);
+}
+
 function currentPhraseBars() {
   return settings.alternateLead ? 2 : 1;
 }
@@ -234,7 +250,7 @@ function cacheElements() {
     'stroke-canvas', 'sticking-meta', 'stroke-now', 'stroke-next',
     'mini-hits', 'mini-acc', 'mini-bias', 'mini-streak',
     'take-badge', 'transport-title', 'mode-control', 'bpm-minus', 'bpm-value', 'bpm-plus', 'bpm-range',
-    'density-control', 'alternate-lead', 'alternate-note', 'bars-select', 'start-btn', 'start-label', 'start-hint',
+    'density-control', 'alternate-lead', 'melody-toggle', 'melody-note', 'alternate-note', 'bars-select', 'start-btn', 'start-label', 'start-hint',
     'input-state', 'level-fill', 'hit-count', 'mic-toggle',
     'sensitivity', 'sensitivity-out', 'mic-error',
     'cal-current', 'cal-start', 'cal-start-label', 'cal-cancel', 'cal-hint', 'cal-pulse', 'cal-status',
@@ -335,6 +351,13 @@ function bindEvents() {
     renderBpm();
     renderStrokeGuide();
     buildExerciseList();
+  });
+
+  els.melodyToggle.addEventListener('click', () => {
+    if (state.take || state.metronome) return;
+    settings.melody = !settings.melody;
+    saveSettings();
+    renderBpm();
   });
 
   els.barsSelect.addEventListener('change', () => {
@@ -628,15 +651,42 @@ function buildExerciseList() {
     `;
     els.exerciseList.append(button);
   }
+
+  const heading = document.createElement('div');
+  heading.className = 'exercise-group';
+  heading.setAttribute('role', 'presentation');
+  heading.textContent = t('train.songs');
+  els.exerciseList.append(heading);
+
+  for (const song of SONGS) {
+    const best = records[recordKey(song.id, song.density, song.bars)]?.bestBpm;
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = `exercise exercise-song${song.id === settings.exerciseId ? ' is-active' : ''}`;
+    button.dataset.exercise = song.id;
+    button.setAttribute('role', 'listitem');
+    button.disabled = Boolean(state.take);
+    button.innerHTML = `
+      <span class="exercise-name">${escapeHtml(exerciseName(song))}</span>
+      <span class="exercise-short">${escapeHtml(song.short)}</span>
+      <span class="exercise-meta">${best ? `${best} BPM` : '—'}</span>
+    `;
+    els.exerciseList.append(button);
+  }
 }
 
 function renderStrokeGuide() {
   const exercise = getExercise(settings.exerciseId);
-  const phraseBars = settings.alternateLead ? 2 : 1;
-  const phrase = buildPhrase(exercise.base, settings.density, { phraseBars });
-  const [first, second] = phrase;
+  const song = isSong(exercise) ? exercise : null;
+  const phraseBars = song ? song.bars : settings.alternateLead ? 2 : 1;
+  const phrase = song
+    ? songPattern(song)
+    : buildPhrase(exercise.base, settings.density, { phraseBars });
+  const [first, second] = phrase.replace(/-/g, '');
   const slotsPerBar = 4 * settings.density;
-  els.stickingMeta.textContent = phraseBars === 1 ? t('train.guide.oneBar') : t('train.guide.twoBars');
+  els.stickingMeta.textContent = song
+    ? tn('train.takeBadge', song.bars)
+    : phraseBars === 1 ? t('train.guide.oneBar') : t('train.guide.twoBars');
   els.strokeNow.textContent = t('train.guide.start', { hand: first });
   els.strokeNext.textContent = second
     ? t('train.guide.next', { hand: second })
@@ -646,7 +696,9 @@ function renderStrokeGuide() {
     ? second === 'R' ? 'var(--accent)' : 'var(--sky)'
     : 'var(--faint)';
   els.pad.removeAttribute('data-hand');
-  if (strokeLane) strokeLane.setPreview(phrase, settings.density, slotsPerBar);
+  if (strokeLane) {
+    strokeLane.setPreview(phrase, settings.density, slotsPerBar, song ? songLabels(song) : null);
+  }
 }
 
 function renderBpm() {
@@ -655,8 +707,13 @@ function renderBpm() {
   els.bpmValue.textContent = String(settings.bpm);
   els.bpmRange.value = String(settings.bpm);
   els.dockBpm.textContent = String(settings.bpm);
+  const song = isSong(exercise);
+  const bars = takeBarsFor(exercise);
   els.barsSelect.value = String(settings.bars);
-  els.stageEyebrow.textContent = `${densityLabel()} · ${settings.bpm} BPM · 4/4`;
+  els.viewTrain.classList.toggle('is-song', song && !metronome);
+  els.stageEyebrow.textContent = song && !metronome
+    ? t('train.songEyebrow', { bpm: settings.bpm })
+    : `${densityLabel()} · ${settings.bpm} BPM · 4/4`;
 
   if (metronome) {
     els.stageTitle.textContent = t('train.metronome.title');
@@ -671,13 +728,15 @@ function renderBpm() {
     els.stageTitle.textContent = exerciseName(exercise);
     els.transportTitle.textContent = t('train.take');
     els.exerciseTip.textContent = `${exerciseDescription(exercise)} ${exerciseTip(exercise)}`;
-    els.takeBadge.textContent = tn('train.takeBadge', settings.bars);
+    els.takeBadge.textContent = tn('train.takeBadge', bars);
     els.startHint.textContent = t('train.hint.take', {
-      bars: settings.bars,
+      bars,
       bpm: settings.bpm,
     });
   }
 
+  els.melodyToggle.setAttribute('aria-checked', String(settings.melody));
+  els.melodyNote.textContent = settings.melody ? t('train.melodyOn') : t('train.melodyOff');
   els.alternateLead.setAttribute('aria-checked', String(settings.alternateLead));
   els.alternateNote.textContent = settings.alternateLead
     ? t('train.rudimentLongSub')
@@ -824,6 +883,7 @@ function renderTransportUI() {
     button.disabled = locked || !allowed;
   }
   els.alternateLead.disabled = locked;
+  els.melodyToggle.disabled = locked;
   for (const button of $$('button', els.modeControl)) {
     button.disabled = locked || state.requesting;
   }
@@ -887,6 +947,13 @@ function setBeatDots(active, bar) {
   });
 }
 
+function lastPlayableBefore(take, index) {
+  for (let i = index; i >= 0; i -= 1) {
+    if (!take.slots[i].rest) return i;
+  }
+  return -1;
+}
+
 function updateHandCue(take, now) {
   if (!take.started) return;
 
@@ -895,8 +962,12 @@ function updateHandCue(take, now) {
   if (take.cueIndex === index) return;
   take.cueIndex = index;
 
-  const hand = take.slots[index].sticking;
-  const next = take.slots[index + 1]?.sticking || null;
+  const currentIndex = take.slots[index].rest
+    ? lastPlayableBefore(take, index)
+    : index;
+  const hand = take.slots[currentIndex]?.sticking || null;
+  if (!hand || hand === '-') return;
+  const next = take.slots.slice(index + 1).find((slot) => !slot.rest)?.sticking || null;
   const handName = t(`train.hand.${hand}`);
 
   els.pad.dataset.hand = hand;
@@ -1394,9 +1465,12 @@ async function beginTake({ simulate = false, simulateOptions = {}, noMic = false
 
   const exercise = getExercise(settings.exerciseId);
   const density = Number(settings.density);
-  const bars = Number(settings.bars);
+  const song = isSong(exercise) ? exercise : null;
+  const bars = song ? song.bars : Number(settings.bars);
   const phraseBars = settings.alternateLead ? 2 : 1;
-  const pattern = buildPhrase(exercise.base, density, { phraseBars });
+  const pattern = song
+    ? songPattern(song)
+    : buildPhrase(exercise.base, density, { phraseBars });
   const beatDur = 60 / settings.bpm;
   const firstCountAt = engine.now() + 0.38;
   const takeStart = firstCountAt + 4 * beatDur;
@@ -1433,8 +1507,27 @@ async function beginTake({ simulate = false, simulateOptions = {}, noMic = false
 
   for (const slot of take.slots) {
     const onBeat = slot.inBar % density === 0;
+    // En una canción solo suena el pulso: los silencios y las notas largas no llevan click.
+    if (song && !onBeat) continue;
     const level = slot.inBar === 0 ? 1 : onBeat ? 0.66 : 0.36;
     take.clickNodes.push(engine.playClick(slot.time, level));
+  }
+
+  if (song) {
+    take.song = song;
+    const labels = songLabels(song);
+    take.slots.forEach((slot, index) => {
+      slot.label = labels[index % labels.length];
+    });
+    if (settings.melody) {
+      for (const event of song.events) {
+        if (event.midi == null) continue;
+        for (let bar = 0; bar < bars / song.bars; bar += 1) {
+          const time = takeStart + (bar * song.bars * 4 * density + event.start) * take.stepDur;
+          take.clickNodes.push(engine.playNote(time, event.midi, event.dur * take.stepDur * 0.92));
+        }
+      }
+    }
   }
 
   state.take = take;
@@ -1469,6 +1562,7 @@ async function beginTake({ simulate = false, simulateOptions = {}, noMic = false
 function scheduleSimulatedHits(take, { errorMs = 0, jitter = 0, missEvery = 0 } = {}) {
   const origin = engine.now();
   take.slots.forEach((slot, index) => {
+    if (slot.rest) return;
     if (missEvery && index % missEvery === missEvery - 1) return;
     const offset = errorMs + (jitter ? Math.sin(index * 1.7) * jitter : 0);
     const delay = (slot.time + offset / 1000 - origin) * 1000;
@@ -1581,7 +1675,7 @@ function finishTake(reason = 'auto') {
 function updateRecords(take, summary) {
   const key = `${take.exerciseId}:${take.density}:${take.phraseBars}`;
   const previous = records[key] || { bestBpm: 0, bestScore: 0, attempts: 0 };
-  const minExpected = Math.min(take.slots.length, 4 * take.density * 2);
+  const minExpected = minExpectedFor(take);
   const qualified = summary.expected >= minExpected
     && summary.extras <= Math.max(2, summary.expected * 0.08);
   const newBestBpm = Boolean(qualified && summary.hitRate >= 0.9 && take.bpm > previous.bestBpm);
@@ -1937,7 +2031,7 @@ function showSummaryModal(payload) {
   els.recordBadge.hidden = !recordText;
   els.recordBadge.textContent = recordText;
 
-  const minExpected = Math.min(take.slots.length, 4 * take.density * 2);
+  const minExpected = minExpectedFor(take);
   const enoughHits = summary.extras <= Math.max(2, summary.expected * 0.08);
   els.modalBump.hidden = !(
     summary.hitRate >= 0.9
@@ -2048,13 +2142,14 @@ function renderRecords(progress) {
   const byExercise = new Map(progress.perExercise.map((item) => [item.exerciseId, item]));
   const phraseBars = currentPhraseBars();
 
-  return EXERCISES.map((exercise) => {
+  return [...EXERCISES, ...SONGS].map((exercise) => {
     const stats = byExercise.get(exercise.id);
+    const pBars = isSong(exercise) ? exercise.bars : phraseBars;
     const modeRecords = DENSITIES
-      .map((density) => records[recordKey(exercise.id, density.value, phraseBars)])
+      .map((density) => records[recordKey(exercise.id, density.value, pBars)])
       .filter(Boolean);
     const chips = DENSITIES.map((density) => {
-      const record = records[recordKey(exercise.id, density.value, phraseBars)];
+      const record = records[recordKey(exercise.id, density.value, pBars)];
       if (!record || !record.bestBpm) return '';
       return `<span class="best-chip">${escapeHtml(densityShort(density.value))} <b>${record.bestBpm}</b> BPM</span>`;
     }).filter(Boolean);

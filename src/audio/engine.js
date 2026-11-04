@@ -283,6 +283,40 @@ export class AudioEngine {
     return { oscillator, gain };
   }
 
+  /**
+   * Nota de melodía (timbre suave tipo carillón).
+   * Devuelve { oscillator, gain } para poder cancelarla con cancelClicks().
+   */
+  playNote(time, midi, duration, level = 1) {
+    if (!this.ctx || midi == null) return null;
+    const start = Math.max(time, this.ctx.currentTime + 0.003);
+    const length = Math.max(0.12, duration);
+    const end = start + length;
+    const frequency = 440 * 2 ** ((midi - 69) / 12);
+    const oscillator = this.ctx.createOscillator();
+    const overtone = this.ctx.createOscillator();
+    const overtoneGain = this.ctx.createGain();
+    const gain = this.ctx.createGain();
+    oscillator.type = 'triangle';
+    oscillator.frequency.setValueAtTime(frequency, start);
+    overtone.type = 'sine';
+    overtone.frequency.setValueAtTime(frequency * 2, start);
+    overtoneGain.gain.value = 0.18;
+    const peak = Math.max(0.0002, 0.17 * this.volume * level);
+    gain.gain.setValueAtTime(0.0001, start);
+    gain.gain.exponentialRampToValueAtTime(peak, start + 0.012);
+    gain.gain.exponentialRampToValueAtTime(peak * 0.55, start + Math.min(0.2, length * 0.5));
+    gain.gain.exponentialRampToValueAtTime(0.0001, end);
+    oscillator.connect(gain);
+    overtone.connect(overtoneGain).connect(gain);
+    gain.connect(this.clickBus);
+    oscillator.start(start);
+    overtone.start(start);
+    oscillator.stop(end + 0.02);
+    overtone.stop(end + 0.02);
+    return { oscillator, gain };
+  }
+
   cancelClicks(nodes) {
     if (!this.ctx || !nodes) return;
     const now = this.ctx.currentTime;

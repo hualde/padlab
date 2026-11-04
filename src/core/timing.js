@@ -91,6 +91,7 @@ export function createTake({
         inBar,
         phraseBar: Math.floor(index / slotsPerBar) % phraseBars,
         sticking: pattern[patternIndex],
+        rest: pattern[patternIndex] === '-',
         time: takeStart + index * stepDur,
         hit: null,
       });
@@ -137,7 +138,7 @@ export function registerHit(take, time) {
     const index = guess + offset;
     if (index < 0 || index >= take.slots.length) continue;
     const slot = take.slots[index];
-    if (slot.hit) continue;
+    if (slot.hit || slot.rest) continue;
     const errorMs = (time - slot.time) * 1000;
     if (Math.abs(errorMs) > take.windowMs) continue;
     if (!best || Math.abs(errorMs) < Math.abs(best.errorMs)) {
@@ -176,7 +177,7 @@ export function registerHit(take, time) {
  */
 export function summarizeTake(take, expectedCount = take.slots.length) {
   const count = clamp(Math.floor(expectedCount), 0, take.slots.length);
-  const considered = take.slots.slice(0, count);
+  const considered = take.slots.slice(0, count).filter((slot) => !slot.rest);
   const matched = considered.filter((slot) => slot.hit);
   const errors = matched.map((slot) => slot.hit.errorMs);
   const extras = take.hits.filter((hit) => hit.extra).length;
@@ -227,6 +228,7 @@ export function bestStreakForSlots(slots, count = slots.length) {
   let current = 0;
   const limit = Math.min(count, slots.length);
   for (let index = 0; index < limit; index += 1) {
+    if (slots[index].rest) continue;
     const hit = slots[index].hit;
     if (hit && hit.quality !== 'off') {
       current += 1;
