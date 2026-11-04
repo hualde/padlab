@@ -1,0 +1,12 @@
+﻿import { readFileSync } from 'node:fs';
+import { setLocale, t } from './src/core/i18n.js';
+const html = readFileSync('index.html','utf8');
+const keys = [...html.matchAll(/data-i18n(?:-[a-z-]+)?="([^"]+)"/g)].map(m=>m[1]);
+const unique = [...new Set(keys)];
+setLocale('es');
+const missingEs = unique.filter(k=>t(k)===k);
+setLocale('en');
+const missingEn = unique.filter(k=>t(k)===k);
+console.log('keys', unique.length);
+console.log('missing es', missingEs);
+console.log('missing en', missingEn);

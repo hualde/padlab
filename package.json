@@ -1,0 +1,14 @@
+{
+  "name": "padlab",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Entrenador de pad acústico con micrófono, metrónomo y análisis de timing.",
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node --test tests/*.test.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

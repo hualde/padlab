@@ -1,0 +1,441 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b0d10">
+  <meta name="description" content="PadLab: entrena tu pad acústico con el micrófono, metrónomo y análisis de timing en tiempo real.">
+  <title>PadLab · entrenador de pad acústico</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <svg class="sprite" aria-hidden="true" focusable="false">
+    <defs>
+      <symbol id="i-mic" viewBox="0 0 24 24">
+        <rect x="9" y="3" width="6" height="11" rx="3"></rect>
+        <path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3M8.5 21h7"></path>
+      </symbol>
+      <symbol id="i-play" viewBox="0 0 24 24">
+        <path d="M8 5.5v13l10-6.5z" fill="currentColor" stroke="none"></path>
+      </symbol>
+      <symbol id="i-stop" viewBox="0 0 24 24">
+        <rect x="6.5" y="6.5" width="11" height="11" rx="2" fill="currentColor" stroke="none"></rect>
+      </symbol>
+      <symbol id="i-metronome" viewBox="0 0 24 24">
+        <path d="M9 4h6l4 16H5L9 4zM12 16l3-9"></path>
+      </symbol>
+      <symbol id="i-target" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="8"></circle>
+        <circle cx="12" cy="12" r="3"></circle>
+      </symbol>
+      <symbol id="i-trash" viewBox="0 0 24 24">
+        <path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5"></path>
+      </symbol>
+      <symbol id="i-download" viewBox="0 0 24 24">
+        <path d="M12 3v12M7 10l5 5 5-5M4 20h16"></path>
+      </symbol>
+      <symbol id="i-check" viewBox="0 0 24 24">
+        <path d="M5 12.5l4.5 4.5L19 6.5"></path>
+      </symbol>
+      <symbol id="i-chevron" viewBox="0 0 24 24">
+        <path d="M7 10l5 5 5-5"></path>
+      </symbol>
+      <symbol id="i-sliders" viewBox="0 0 24 24">
+        <path d="M4 7h10M18 7h2M4 17h4M12 17h8M14 4v6M8 14v6"></path>
+      </symbol>
+    </defs>
+  </svg>
+
+  <header class="topbar">
+    <a class="brand" href="#" aria-label="PadLab, inicio" data-i18n-aria-label="aria.home">
+      <span class="brand-mark" aria-hidden="true"><i></i></span>
+      <span class="brand-text"><strong>PadLab</strong><small data-i18n="brand.tagline">entrenador de pad acústico</small></span>
+    </a>
+    <nav class="tabs" role="tablist" aria-label="Secciones" data-i18n-aria-label="aria.sections">
+      <button class="tab is-active" id="tab-train" data-view="train" role="tab" aria-selected="true" aria-controls="view-train" data-i18n="tabs.train">Entrenar</button>
+      <button class="tab" id="tab-calibrate" data-view="calibrate" role="tab" aria-selected="false" aria-controls="view-calibrate" data-i18n="tabs.calibrate">Calibrar</button>
+      <button class="tab" id="tab-progress" data-view="progress" role="tab" aria-selected="false" aria-controls="view-progress" data-i18n="tabs.progress">Progreso</button>
+      <button class="tab" id="tab-settings" data-view="settings" role="tab" aria-selected="false" aria-controls="view-settings" data-i18n="tabs.settings">Ajustes</button>
+    </nav>
+    <button class="lang-pill" id="language-toggle" type="button" data-i18n-title="language.change" data-i18n-aria-label="language.change">ES</button>
+    <button class="mic-pill" id="mic-pill" data-state="off" title="Activar micrófono">
+      <span class="mic-dot" aria-hidden="true"></span>
+      <span id="mic-pill-text">Micrófono apagado</span>
+    </button>
+  </header>
+
+  <main class="main">
+    <section class="view" id="view-train" data-view="train" role="tabpanel" aria-labelledby="tab-train">
+      <div class="train-layout">
+        <aside class="col-left sheet" id="sheet-rudiments" aria-label="Rudimentos" data-i18n-aria-label="train.rudiments">
+          <button class="sheet-x" type="button" data-close-sheet aria-label="Cerrar" data-i18n-aria-label="aria.close">×</button>
+          <section class="panel exercises-panel">
+            <div class="panel-head">
+              <h2 data-i18n="train.rudiments">Rudimentos</h2>
+              <span class="panel-badge" data-i18n="train.classics">8 clásicos</span>
+            </div>
+            <div class="exercise-list" id="exercise-list" role="list"></div>
+          </section>
+          <section class="tip-card" aria-live="polite">
+            <span class="eyebrow" data-i18n="train.tip">Consejo</span>
+            <p id="exercise-tip">Busca un rebote cómodo y deja que el palo suba solo.</p>
+          </section>
+        </aside>
+
+        <section class="stage panel" aria-label="Mesa de práctica" data-i18n-aria-label="aria.practice">
+          <div class="stage-head">
+            <div class="stage-title">
+              <p class="eyebrow" id="stage-eyebrow">Golpes simples · Corcheas</p>
+              <h1 id="stage-title">Golpes simples</h1>
+            </div>
+            <button class="pick-btn" id="open-rudiments" type="button" aria-controls="sheet-rudiments">
+              <span data-i18n="train.changeRudiment">Cambiar</span>
+              <svg class="icon" aria-hidden="true"><use href="#i-chevron"></use></svg>
+            </button>
+            <div class="take-readout">
+              <div class="beat-dots" id="beat-dots" aria-hidden="true">
+                <span></span><span></span><span></span><span></span>
+              </div>
+              <span class="take-state" id="take-state">Listo</span>
+            </div>
+          </div>
+          <div class="progress" aria-hidden="true"><span id="progress-fill"></span></div>
+
+          <div class="stage-body">
+            <div class="pad-column">
+              <div class="pad-wrap">
+                <div class="pad" id="pad">
+                  <svg class="pad-ring" viewBox="0 0 240 240" aria-hidden="true">
+                    <circle class="ring-track" cx="120" cy="120" r="112"></circle>
+                    <circle class="ring-level" id="ring-level" cx="120" cy="120" r="112"></circle>
+                  </svg>
+                  <div class="pad-face">
+                    <span class="pad-kicker" id="pad-kicker">entrada</span>
+                    <span class="pad-main" id="pad-main">GOLPEA<br>TU PAD</span>
+                    <span class="pad-sub" id="pad-sub">Micrófono apagado</span>
+                  </div>
+                </div>
+                <div class="pad-cta" id="pad-cta">
+                  <button class="btn btn-primary" id="pad-mic-btn" data-i18n="train.pad.activate">Activar micrófono</button>
+                  <span class="pad-cta-note" data-i18n="train.pad.note">Pon el micro cerca del pad. Auriculares mejor.</span>
+                </div>
+              </div>
+              <div class="feedback" id="feedback" data-quality="idle">
+                <span class="feedback-value" id="feedback-value">—</span>
+                <span class="feedback-label" id="feedback-label">Listo para escuchar</span>
+              </div>
+            </div>
+
+            <div class="stroke-block">
+              <div class="stroke-head"><span data-i18n="train.guide">Guía de golpes</span><span id="sticking-meta">1 compás</span></div>
+              <canvas id="stroke-canvas" aria-label="Línea temporal de golpes: marca la mano derecha o izquierda y el momento de tocar" data-i18n-aria-label="aria.strokeLane"></canvas>
+              <div class="stroke-foot">
+                <span id="stroke-now">Empieza en R</span>
+                <span id="stroke-next">Siguiente L</span>
+              </div>
+              <p class="stroke-legend"><b class="hand-r">R</b> <span data-i18n="train.right">derecha</span> · <b class="hand-l">L</b> <span data-i18n="train.left">izquierda</span></p>
+            </div>
+          </div>
+
+          <div class="mini" aria-label="Resumen de la toma" data-i18n-aria-label="aria.takeSummary">
+            <div><span data-i18n="train.mini.hits">Golpes</span><strong id="mini-hits">0</strong></div>
+            <div><span data-i18n="train.mini.accuracy">Aciertos</span><strong id="mini-acc">—</strong></div>
+            <div><span data-i18n="train.mini.mean">Media</span><strong id="mini-bias">—</strong></div>
+            <div><span data-i18n="train.mini.streak">Racha</span><strong id="mini-streak">0</strong></div>
+          </div>
+        </section>
+
+        <aside class="col-right sheet" id="sheet-settings" aria-label="Ajustes de la toma" data-i18n-aria-label="train.takeSettings">
+          <button class="sheet-x" type="button" data-close-sheet aria-label="Cerrar" data-i18n-aria-label="aria.close">×</button>
+          <section class="panel transport-panel">
+            <div class="panel-head">
+              <h2 id="transport-title">Toma</h2>
+              <span class="panel-badge" id="take-badge">8 compases</span>
+            </div>
+            <div class="segmented mode-switch" id="mode-control" role="group" aria-label="Modo de práctica" data-i18n-aria-label="aria.mode">
+              <button data-mode="exercise" class="is-active" aria-pressed="true" data-i18n="train.mode.exercise">Ejercicio</button>
+              <button data-mode="metronome" aria-pressed="false" data-i18n="train.mode.metronome">Solo metrónomo</button>
+            </div>
+            <div class="bpm-row">
+              <button class="step-btn" id="bpm-minus" aria-label="Bajar 5 BPM" data-i18n-aria-label="aria.bpmDown">−</button>
+              <div class="bpm-value"><span id="bpm-value">100</span><small>BPM</small></div>
+              <button class="step-btn" id="bpm-plus" aria-label="Subir 5 BPM" data-i18n-aria-label="aria.bpmUp">+</button>
+            </div>
+            <input class="range" type="range" id="bpm-range" min="40" max="240" step="1" value="100" aria-label="Tempo en BPM" data-i18n-aria-label="aria.tempo">
+            <div class="segmented" id="density-control" role="group" aria-label="Densidad de notas" data-i18n-aria-label="aria.density">
+              <button data-density="2" class="is-active" aria-pressed="true" data-i18n="density.2">Corcheas</button>
+              <button data-density="3" aria-pressed="false" data-i18n="density.3">Tresillos</button>
+              <button data-density="4" aria-pressed="false" data-i18n="density.4">Semicorcheas</button>
+            </div>
+            <button class="switch-row" id="alternate-lead" type="button" role="switch" aria-checked="true">
+              <span class="switch-copy">
+                <strong data-i18n="train.rudimentLong">Rudimento largo</strong>
+                <small id="alternate-note">2 compases alternando manos</small>
+              </span>
+              <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
+            </button>
+            <div class="select-row">
+              <label for="bars-select" data-i18n="train.bars">Compases por toma</label>
+              <select id="bars-select">
+                <option value="2">2</option>
+                <option value="4">4</option>
+                <option value="8" selected>8</option>
+                <option value="16">16</option>
+                <option value="32">32</option>
+              </select>
+            </div>
+            <button class="btn btn-primary btn-start" id="start-btn">
+              <svg class="icon" aria-hidden="true"><use href="#i-play"></use></svg>
+              <span id="start-label">Empezar toma</span>
+              <kbd data-i18n="train.key.space">espacio</kbd>
+            </button>
+            <p class="hint" id="start-hint">Entrada de 4 clicks · 8 compases · 100 BPM</p>
+          </section>
+
+          <section class="panel input-panel">
+            <div class="panel-head">
+              <h2 data-i18n="train.input">Entrada</h2>
+              <span class="status-text" id="input-state">Apagado</span>
+            </div>
+            <div class="level-row">
+              <div class="level-bar" aria-hidden="true"><span id="level-fill"></span></div>
+              <span class="hit-count" id="hit-count">0 golpes</span>
+            </div>
+            <button class="btn btn-ghost btn-block" id="mic-toggle">Activar micrófono</button>
+            <div class="slider-row">
+              <label for="sensitivity" data-i18n="train.sensitivity">Sensibilidad</label>
+              <output id="sensitivity-out" for="sensitivity">55</output>
+            </div>
+            <input class="range" type="range" id="sensitivity" min="0" max="100" step="1" value="55">
+            <p class="hint" data-i18n="train.sensitivityHint">Sube la sensibilidad si no detecta; bájala si dispara solo.</p>
+            <p class="mic-error" id="mic-error" hidden></p>
+          </section>
+        </aside>
+      </div>
+    </section>
+
+    <section class="view" id="view-calibrate" data-view="calibrate" role="tabpanel" aria-labelledby="tab-calibrate" hidden>
+      <header class="view-head">
+        <div>
+          <p class="eyebrow" data-i18n="cal.eyebrow">Ajuste fino</p>
+          <h1 data-i18n="cal.title">Calibrar el retardo</h1>
+          <p class="lede" data-i18n="cal.lede">Mide cuánto tarda tu equipo en oír el click y detectar el golpe. Toca el pad con cada click durante 12 pulsos y calculo la compensación.</p>
+        </div>
+      </header>
+
+      <div class="cal-layout">
+        <section class="panel">
+          <h2 data-i18n="cal.before">Antes de empezar</h2>
+          <ul class="checklist">
+            <li><span>1</span><span data-i18n="cal.step1">Ponte auriculares si puedes: el click no debe colarse en el micro.</span></li>
+            <li><span>2</span><span data-i18n="cal.step2">Acerca el micrófono al pad, sin taparlo.</span></li>
+            <li><span>3</span><span data-i18n="cal.step3">Toca con la intención de caer justo encima de cada click.</span></li>
+          </ul>
+          <div class="offset-now">
+            <span data-i18n="cal.current">Compensación actual</span>
+            <strong id="cal-current">0 ms</strong>
+          </div>
+          <button class="btn btn-primary btn-block" id="cal-start">
+            <svg class="icon" aria-hidden="true"><use href="#i-target"></use></svg>
+            <span id="cal-start-label" data-i18n="cal.start">Empezar calibración</span>
+          </button>
+          <button class="btn btn-ghost btn-block" id="cal-cancel" hidden data-i18n="cal.cancel">Cancelar</button>
+          <p class="hint" id="cal-hint">Necesito el micrófono activo. Te lo pediré al empezar.</p>
+        </section>
+
+        <section class="panel cal-stage">
+          <div class="cal-pulse" id="cal-pulse" aria-live="polite">·</div>
+          <p class="cal-status" id="cal-status">Pulsa «Empezar calibración» y toca el pad con cada click.</p>
+          <div class="cal-progress"><span id="cal-progress"></span></div>
+          <div class="cal-dots" id="cal-dots" aria-hidden="true"></div>
+          <div class="cal-result" id="cal-result" hidden>
+            <span class="eyebrow" data-i18n="cal.result">Resultado</span>
+            <strong class="cal-offset" id="cal-offset">+0 ms</strong>
+            <p id="cal-detail">—</p>
+            <div class="cal-actions">
+              <button class="btn btn-primary" id="cal-apply" data-i18n="cal.apply">Aplicar retardo</button>
+              <button class="btn btn-ghost" id="cal-retry" data-i18n="cal.retry">Repetir</button>
+            </div>
+          </div>
+          <div class="level-row cal-level-row">
+            <div class="level-bar" aria-hidden="true"><span id="cal-level-fill"></span></div>
+            <span class="hit-count" data-i18n="cal.level">nivel de entrada</span>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <section class="view" id="view-progress" data-view="progress" role="tabpanel" aria-labelledby="tab-progress" hidden>
+      <header class="view-head">
+        <div>
+          <p class="eyebrow" data-i18n="progress.eyebrow">Tu práctica</p>
+          <h1 data-i18n="progress.title">Progreso</h1>
+          <p class="lede" data-i18n="progress.lede">Todo se queda en este navegador. La constancia vale más que una toma perfecta.</p>
+        </div>
+        <button class="btn btn-quiet" id="progress-clear">
+          <svg class="icon" aria-hidden="true"><use href="#i-trash"></use></svg>
+          <span data-i18n="progress.clear">Borrar historial</span>
+        </button>
+      </header>
+      <div class="kpis" id="kpis"></div>
+      <div class="progress-grid">
+        <section class="panel">
+          <div class="panel-head"><h2 data-i18n="progress.lastTakes">Últimas tomas</h2><span class="panel-badge" id="chart-count"></span></div>
+          <div class="chart" id="chart"></div>
+        </section>
+        <section class="panel">
+          <div class="panel-head"><h2 data-i18n="progress.byExercise">Por ejercicio</h2><span class="panel-badge" id="records-mode">frase 2 compases</span></div>
+          <div class="records-list" id="records-list"></div>
+        </section>
+      </div>
+      <section class="panel">
+        <div class="panel-head"><h2 data-i18n="progress.history">Historial</h2><span class="panel-badge" id="history-count"></span></div>
+        <div class="table-wrap" id="sessions-table"></div>
+      </section>
+    </section>
+
+    <section class="view" id="view-settings" data-view="settings" role="tabpanel" aria-labelledby="tab-settings" hidden>
+      <header class="view-head">
+        <div>
+          <p class="eyebrow" data-i18n="settings.eyebrow">Ajustes</p>
+          <h1 data-i18n="settings.title">Afina la mesa</h1>
+          <p class="lede" data-i18n="settings.lede">Micrófono, retardo, volumen e idioma. Los cambios se guardan solos.</p>
+        </div>
+      </header>
+
+      <div class="settings-grid">
+        <section class="panel">
+          <div class="panel-head"><h2 data-i18n="settings.mic">Micrófono</h2><span class="status-text" id="settings-mic-state">Apagado</span></div>
+          <label class="field-label" for="device-select" data-i18n="mic.device.label">Dispositivo de entrada</label>
+          <select id="device-select">
+            <option value="" data-i18n="mic.device.default">Micrófono predeterminado</option>
+          </select>
+          <button class="btn btn-ghost btn-block" id="settings-mic">Activar micrófono</button>
+          <div class="level-bar" aria-hidden="true"><span id="settings-level-fill"></span></div>
+          <div class="slider-row">
+            <label for="settings-sensitivity" data-i18n="train.sensitivity">Sensibilidad</label>
+            <output id="settings-sensitivity-out" for="settings-sensitivity">55</output>
+          </div>
+          <input class="range" type="range" id="settings-sensitivity" min="0" max="100" step="1" value="55">
+          <p class="hint" data-i18n="mic.hint">Se aplica al momento, también durante la práctica.</p>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head"><h2 data-i18n="settings.latency">Retardo</h2><span class="panel-badge" id="calibration-badge">Sin calibrar</span></div>
+          <p class="hint" data-i18n="settings.latencyHint">Compensa el tiempo que tarda el sonido en llegar al micro y en procesarse.</p>
+          <div class="slider-row">
+            <label for="latency-offset" data-i18n="settings.manualComp">Compensación manual</label>
+            <output id="latency-out" for="latency-offset">0 ms</output>
+          </div>
+          <input class="range" type="range" id="latency-offset" min="-100" max="150" step="1" value="0">
+          <p class="hint" data-i18n="settings.latencyHint2">Un valor positivo compensa golpes detectados tarde; uno negativo, golpes detectados pronto.</p>
+          <button class="btn btn-ghost btn-block" id="settings-calibrate" data-i18n="settings.goCalibrate">Ir a calibrar</button>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head"><h2 data-i18n="settings.metronome">Metrónomo</h2><span class="panel-badge" id="volume-badge">70%</span></div>
+          <div class="slider-row">
+            <label for="volume" data-i18n="settings.volume">Volumen del click</label>
+            <output id="volume-out" for="volume">70%</output>
+          </div>
+          <input class="range" type="range" id="volume" min="0" max="100" step="1" value="70">
+          <p class="hint" data-i18n="settings.volumeHint">Con auriculares evitarás que el click entre por el micro y cuente como golpe.</p>
+          <div class="shortcuts">
+            <span><kbd data-i18n="train.key.space">espacio</kbd> <span data-i18n="settings.shortcut.start">empezar / parar</span></span>
+            <span><kbd>esc</kbd> <span data-i18n="settings.shortcut.close">cerrar o parar</span></span>
+            <span><kbd>↑</kbd><kbd>↓</kbd> <span data-i18n="settings.shortcut.tempo">tempo ±5</span></span>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head"><h2 data-i18n="settings.language">Idioma</h2></div>
+          <div class="segmented" id="language-control" role="group" aria-label="Idioma" data-i18n-aria-label="aria.language">
+            <button data-locale="es" class="is-active" aria-pressed="true" data-i18n="language.es">Español</button>
+            <button data-locale="en" aria-pressed="false" data-i18n="language.en">English</button>
+            <button data-locale="fr" aria-pressed="false" data-i18n="language.fr">Français</button>
+          </div>
+          <p class="hint" data-i18n="settings.languageHint">Elige el idioma de la interfaz.</p>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head"><h2 data-i18n="settings.data">Datos</h2></div>
+          <p class="hint" data-i18n="settings.dataHint">Historial, récords y ajustes viven solo en este navegador.</p>
+          <button class="btn btn-ghost btn-block" id="export-btn">
+            <svg class="icon" aria-hidden="true"><use href="#i-download"></use></svg>
+            <span data-i18n="settings.export">Exportar historial</span>
+          </button>
+          <button class="btn btn-danger btn-block" id="clear-btn">
+            <svg class="icon" aria-hidden="true"><use href="#i-trash"></use></svg>
+            <span data-i18n="settings.clear">Borrar historial</span>
+          </button>
+          <p class="fine" id="diagnostics">—</p>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <span data-i18n="footer.local">PadLab 0.1 · práctica local, sin cuentas</span>
+    <span data-i18n="footer.made">Hecho para pad acústico y micrófono</span>
+  </footer>
+
+  <div class="mobile-dock" id="mobile-dock" aria-label="Transporte rápido" data-i18n-aria-label="aria.dock">
+    <button class="dock-icon" id="dock-settings" type="button" aria-controls="sheet-settings" aria-label="Ajustes de la toma" data-i18n-aria-label="train.takeSettings" data-i18n-title="train.takeSettings">
+      <svg class="icon" aria-hidden="true"><use href="#i-sliders"></use></svg>
+    </button>
+    <div class="dock-tempo">
+      <button class="dock-step" id="dock-minus" aria-label="Bajar 5 BPM" data-i18n-aria-label="aria.bpmDown">−</button>
+      <span class="dock-bpm"><strong id="dock-bpm">100</strong><small>BPM</small></span>
+      <button class="dock-step" id="dock-plus" aria-label="Subir 5 BPM" data-i18n-aria-label="aria.bpmUp">+</button>
+    </div>
+    <button class="btn btn-primary dock-start" id="dock-start">
+      <svg class="icon" aria-hidden="true"><use href="#i-play"></use></svg>
+      <span id="dock-start-label">Empezar</span>
+    </button>
+  </div>
+
+  <div class="sheet-backdrop" id="sheet-backdrop" data-close-sheet></div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <div class="modal" id="modal" hidden>
+    <div class="modal-backdrop" data-close="modal"></div>
+    <div class="modal-card" id="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title" tabindex="-1">
+      <button class="modal-x" id="modal-x" aria-label="Cerrar" data-i18n-aria-label="aria.close">×</button>
+      <p class="eyebrow" id="modal-eyebrow" data-i18n="summary.eyebrow">Toma completada</p>
+      <h2 id="modal-title">Golpes simples · 100 BPM</h2>
+      <div class="score-row">
+        <div class="score-ring" id="score-ring" style="--score: 0">
+          <span id="score-value">0</span>
+          <small data-i18n="summary.points">puntos</small>
+        </div>
+        <div class="score-copy">
+          <strong id="score-grade">Bien</strong>
+          <p id="score-note">—</p>
+        </div>
+      </div>
+      <div class="summary-grid">
+        <div><span data-i18n="summary.accuracy">Aciertos</span><strong id="sum-acc">—</strong></div>
+        <div><span data-i18n="summary.perfect">Perfectos</span><strong id="sum-perfect">—</strong></div>
+        <div><span data-i18n="summary.bias">Desviación</span><strong id="sum-bias">—</strong></div>
+        <div><span data-i18n="summary.consistency">Consistencia</span><strong id="sum-sd">—</strong></div>
+        <div><span data-i18n="summary.extras">Golpes extra</span><strong id="sum-extra">—</strong></div>
+        <div><span data-i18n="summary.streak">Racha</span><strong id="sum-streak">—</strong></div>
+      </div>
+      <p class="record-badge" id="record-badge" hidden>Nuevo récord personal</p>
+      <div class="modal-actions">
+        <button class="btn btn-primary" id="modal-repeat" data-i18n="summary.repeat">Repetir</button>
+        <button class="btn btn-ghost" id="modal-bump" hidden data-i18n="summary.bump">+5 BPM</button>
+        <button class="btn btn-quiet" id="modal-close" data-i18n="summary.close">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <noscript>
+    <p class="noscript" data-i18n="noscript">PadLab necesita JavaScript y acceso al micrófono para funcionar.</p>
+  </noscript>
+
+  <script type="module" src="src/app.js"></script>
+</body>
+</html>
