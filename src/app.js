@@ -1778,6 +1778,10 @@ function showIdleHit() {
 /* Calibración                                                         */
 /* ------------------------------------------------------------------ */
 
+// Clicks previos (no cuentan) para que el humano llegue al pad, y clicks medidos.
+const CALIBRATION_LEAD = 6;
+const CALIBRATION_MEASURED = 16;
+
 async function startCalibration() {
   if (state.calibration?.running) return;
   if (state.take) {
@@ -1793,21 +1797,23 @@ async function startCalibration() {
 
   await engine.ensure();
 
-  const total = 12;
+  const lead = CALIBRATION_LEAD;
+  const total = lead + CALIBRATION_MEASURED;
   const beatDur = 60 / 90;
-  const first = engine.now() + 0.7;
+  const first = engine.now() + 1;
   const clickTimes = Array.from({ length: total }, (_, index) => first + index * beatDur);
   const nodes = clickTimes.map((time, index) => engine.playClick(time, index % 4 === 0 ? 1 : 0.7));
 
   state.calibration = {
     running: true,
     total,
+    lead,
     beatDur,
     clickTimes,
     nodes,
     hits: [],
     pulseIndex: -1,
-    timer: setTimeout(() => finishCalibration(), (total * beatDur + 0.75) * 1000),
+    timer: setTimeout(() => finishCalibration(), (total * beatDur + 1) * 1000),
   };
 
   els.calStart.hidden = true;
@@ -1816,7 +1822,7 @@ async function startCalibration() {
   els.calDots.innerHTML = '';
   els.calPulse.textContent = '·';
   els.calPulse.classList.remove('is-beat');
-  els.calStatus.textContent = t('cal.status.running');
+  els.calStatus.textContent = t('cal.status.lead');
   els.calProgress.style.width = '0%';
   els.calCurrent.textContent = formatSigned(settings.latencyOffsetMs);
 }
@@ -1826,7 +1832,7 @@ function registerCalibrationHit(time) {
   if (!cal?.running) return;
 
   const clickIndex = Math.round((time - cal.clickTimes[0]) / cal.beatDur);
-  if (clickIndex < 2 || clickIndex >= cal.total) return;
+  if (clickIndex < cal.lead || clickIndex >= cal.total) return;
   if (cal.hits.some((hit) => hit.clickIndex === clickIndex)) return;
 
   const offsetMs = (time - cal.clickTimes[clickIndex]) * 1000;
@@ -1852,8 +1858,8 @@ function finishCalibration() {
 
   const result = estimateLatency({
     hits: cal.hits.map((hit) => hit.time),
-    clicks: cal.clickTimes.slice(2),
-    minSamples: 5,
+    clicks: cal.clickTimes.slice(cal.lead),
+    minSamples: 8,
   });
 
   state.calibration = { ...cal, running: false, result };
@@ -2410,11 +2416,13 @@ function updateCalibrationPulse() {
   if (index < 0 || index >= cal.total || index === cal.pulseIndex) return;
 
   cal.pulseIndex = index;
-  els.calPulse.textContent = String(index + 1);
+  const inLead = index < cal.lead;
+  els.calPulse.textContent = inLead ? String(cal.lead - index) : String(index - cal.lead + 1);
+  if (index === cal.lead) els.calStatus.textContent = t('cal.status.running');
   els.calPulse.classList.remove('is-beat');
   void els.calPulse.offsetWidth;
   els.calPulse.classList.add('is-beat');
-  els.calProgress.style.width = `${((index + 1) / cal.total) * 100}%`;
+  els.calProgress.style.width = `${(Math.max(0, index + 1 - cal.lead) / (cal.total - cal.lead)) * 100}%`;
 
   setTimeout(() => {
     if (state.calibration?.running) els.calPulse.classList.remove('is-beat');

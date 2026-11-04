@@ -87,7 +87,7 @@ La app es estática: no hay que compilar nada. Para usarla en el teléfono tiene
 1. Elige **Ejercicio** o **Solo metrónomo**.
 2. En ejercicio, pulsa **Activar micrófono** y acepta el permiso. Verás el medidor y el contador de golpes.
 3. Golpea el pad para comprobar que te oye. Si no detecta, sube la **sensibilidad**; si dispara solo, bájala.
-4. Entra en **Calibrar** y toca 12 clicks seguidos. Aplica el retardo medido. Sin este paso la app funciona, pero el análisis será menos fino.
+4. Entra en **Calibrar** y espera los 6 clicks previos (no cuentan) y toca los 16 siguientes. Aplica el retardo medido. Sin este paso la app funciona, pero el análisis será menos fino.
 5. Elige rudimento, densidad, frase, compases y BPM.
 6. Pulsa **Empezar toma**. Hay una entrada de 4 clicks y empieza la toma.
 7. Al terminar verás aciertos, perfectos, desviación media, consistencia y puntos. Si has ido bien, prueba **+5 BPM**.
